@@ -1,9 +1,10 @@
 use reqwest::Client;
+use robust_rust::run;
 
 #[tokio::test]
 async fn health_check_works() {
     // Arrange
-    spawn_app().await.expect("Failed to spawn our app.");
+    spawn_app();
     // We need to bring in `reqwest`
     // to perform HTTP requests against our
     let client = Client::new();
@@ -18,6 +19,10 @@ async fn health_check_works() {
     assert_eq!(Some(19), response.content_length());
 }
 
-async fn spawn_app() -> std::io::Result<()> {
-    Ok(())
+
+#[allow(clippy::let_underscore_future)]
+fn spawn_app() {
+    let server = run().expect("Failed to bind address");
+
+    let _ = tokio::spawn(server);
 }
