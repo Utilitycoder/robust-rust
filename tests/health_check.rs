@@ -1,5 +1,5 @@
 use reqwest::Client;
-use robust_rust::run;
+use robust_rust::startup::run;
 use std::net::TcpListener;
 
 #[allow(clippy::let_underscore_future)]
