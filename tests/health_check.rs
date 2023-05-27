@@ -4,14 +4,19 @@ use sqlx::{Connection, PgConnection};
 use std::net::TcpListener;
 
 #[allow(clippy::let_underscore_future)]
-fn spawn_app() -> String {
+async fn spawn_app() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
 
     // Retrieve the port assigned to us by the OS
     let port = listener.local_addr().unwrap().port();
 
+    let configuration = get_configuration().expect("Failed to read configuration.");
+
+    let connection = PgConnection::connect(&configuration.database.connection_string()).await
+        .expect("Failed to connect to Postgres.");
+
     // Launch our application as a background task
-    let server = run(listener).expect("Failed to bind address");
+    let server = run(listener, connection).expect("Failed to bind address");
 
     let _ = tokio::spawn(server);
 
@@ -22,7 +27,7 @@ fn spawn_app() -> String {
 #[tokio::test]
 async fn health_check_works() {
     // Arrange
-    let address = spawn_app();
+    let address = spawn_app().await;
     // We need to bring in `reqwest`
     // to perform HTTP requests against our
     let client = Client::new();
@@ -40,7 +45,7 @@ async fn health_check_works() {
 #[tokio::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
     // Arrange
-    let app_address = spawn_app();
+    let app_address = spawn_app().await;
 
     let configuration = get_configuration().expect("Failed to read configuration.");
     let connection_string = configuration.database.connection_string();
@@ -72,7 +77,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
 #[tokio::test]
 async fn subscribe_returns_a_400_when_data_is_missing() {
     // Arrange
-    let app_address = spawn_app();
+    let app_address = spawn_app().await;
     let client = reqwest::Client::new();
     let test_cases = vec![
         ("name=le%20guin", "missing the email"),
