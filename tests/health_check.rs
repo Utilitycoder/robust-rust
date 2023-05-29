@@ -1,11 +1,27 @@
+use once_cell::sync::Lazy;
 use reqwest::Client;
 use robust_rust::{
     configuration::{get_configuration, DatabaseSettings},
     startup::run,
+    telemetry::{get_subscriber, init_subscriber},
 };
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 use uuid::Uuid;
+
+// Ensure that the `tracing` stack is only initialized once using `Lazy`.
+static TRACING: Lazy<()> = Lazy::new(|| {
+    let default_filter_level: String = "info".into();
+    let subscriber_name = "test".to_string();
+
+    if std::env::var("TEST_LOG").is_ok() {
+        let subscriber = get_subscriber(subscriber_name, default_filter_level, std::io::stdout);
+        init_subscriber(subscriber);
+    } else {
+        let subscriber = get_subscriber(subscriber_name, default_filter_level, std::io::sink);
+        init_subscriber(subscriber);
+    };
+});
 
 pub struct TestApp {
     pub address: String,
@@ -14,6 +30,8 @@ pub struct TestApp {
 
 #[allow(clippy::let_underscore_future)]
 async fn spawn_app() -> TestApp {
+    Lazy::force(&TRACING);
+
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
 
     // Retrieve the port assigned to us by the OS
@@ -80,7 +98,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     let client = reqwest::Client::new();
 
     // Act
-    let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+    let body = "name=le%20guid&email=ursula_le_guin%40gmail.com";
     let response = client
         .post(&format!("{}/subscriptions", &app_details.address))
         .header("Content-Type", "application/x-www-form-urlencoded")
@@ -97,7 +115,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
         .expect("Failed to fetch saved subscription.");
     println!("saved: {:?}", saved);
     assert_eq!(saved.email, "ursula_le_guin@gmail.com");
-    assert_eq!(saved.name, "le guin");
+    assert_eq!(saved.name, "le guid");
 }
 
 #[tokio::test]
