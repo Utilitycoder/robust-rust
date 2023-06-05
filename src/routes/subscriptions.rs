@@ -1,7 +1,8 @@
 use actix_web::{web, HttpResponse};
 use chrono::Utc;
 use sqlx::PgPool;
-use uuid::Uuid;
+use sqlx::types::Uuid;
+// use uuid::Uuid;
 
 #[allow(dead_code)]
 #[derive(serde::Deserialize)]
@@ -34,12 +35,13 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> Ht
     skip(form, pool),
 )]
 async fn insert_subscriber(form: &FormData, pool: &PgPool) -> Result<(), sqlx::Error> {
+    let subscribe_id = Uuid::new_v4();
     sqlx::query!(
         r#"
         INSERT INTO subscriptions (id, email, name, subscribed_at)
         VALUES ($1, $2, $3, $4)
         "#,
-        Uuid::new_v4(),
+        subscribe_id,
         form.email,
         form.name,
         Utc::now()
