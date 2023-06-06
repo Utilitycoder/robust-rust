@@ -62,7 +62,7 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
 
     // Layer on environment specific values
     settings.merge(
-        config::File::from(configuration_directory.join(environment.as_str())).required(true)
+        config::File::from(configuration_directory.join(environment.as_str())).required(true),
     )?;
 
     settings.try_into()
@@ -90,7 +90,10 @@ impl TryFrom<String> for Environment {
         match value.to_lowercase().as_str() {
             "local" => Ok(Self::Local),
             "production" => Ok(Self::Production),
-            _ => Err(format!("{} is not a supported environment. Use either local or production", value)),
+            _ => Err(format!(
+                "{} is not a supported environment. Use either local or production",
+                value
+            )),
         }
     }
 }
