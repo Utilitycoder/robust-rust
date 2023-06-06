@@ -1,7 +1,7 @@
 use actix_web::{web, HttpResponse};
 use chrono::Utc;
-use sqlx::PgPool;
 use sqlx::types::Uuid;
+use sqlx::PgPool;
 // use uuid::Uuid;
 
 #[allow(dead_code)]
@@ -32,7 +32,7 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> Ht
 
 #[tracing::instrument(
     name = "Saving a new subscriber details in the database",
-    skip(form, pool),
+    skip(form, pool)
 )]
 async fn insert_subscriber(form: &FormData, pool: &PgPool) -> Result<(), sqlx::Error> {
     let subscribe_id = Uuid::new_v4();
