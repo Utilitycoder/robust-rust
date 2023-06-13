@@ -35,6 +35,9 @@ fake = "2.6.1"
 reqwest = "0.11.18"
 once_cell = "1"
 claim = "0.5"
+quickcheck = "1.0.3"
+quickcheck_macros = "1.0.0"
+rand = "0.8.5"
 
 [profile.release]
 strip = true
