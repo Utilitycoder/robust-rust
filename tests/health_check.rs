@@ -172,10 +172,10 @@ async fn subscribe_returns_a_400_when_fields_are_present_but_empty() {
             .expect("Failed to execute request.");
         // Assert
         assert_eq!(
-            200,
+            400,
             response.status().as_u16(),
             // Additional customised error message on test failure
-            "The API did not return a 200 OK when the payload was {}.",
+            "The API did not return a 400 bad request when the payload was {}.",
             error_message
         );
     }
