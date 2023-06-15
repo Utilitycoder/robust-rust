@@ -1,4 +1,4 @@
-use crate::domain::{NewSubscriber, SubscriberName};
+use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
 use actix_web::{web, HttpResponse};
 use chrono::Utc;
 use sqlx::types::Uuid;
@@ -19,16 +19,10 @@ pub struct FormData {
         name = %form.name
     )
 )]
-
 pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
-    let subscriber_name = match SubscriberName::parse(form.0.name) {
-        Ok(name) => name,
-        Err(_) => return HttpResponse::BadRequest().finish(),
-    };
-
-    let new_subscriber = NewSubscriber {
-        email: form.0.email,
-        name: subscriber_name,
+    let new_subscriber = match form.0.try_into() {
+        Ok(subscriber) => subscriber,
+        Err(e) => return HttpResponse::BadRequest().body(e),
     };
 
     match insert_subscriber(&new_subscriber, &pool).await {
@@ -37,6 +31,16 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> Ht
             tracing::error!("Failed to execute query: {:?}", e);
             HttpResponse::InternalServerError().finish()
         }
+    }
+}
+
+impl TryFrom<FormData> for NewSubscriber {
+    type Error = String;
+
+    fn try_from(value: FormData) -> Result<Self, Self::Error> {
+        let name = SubscriberName::parse(value.name)?;
+        let email = SubscriberEmail::parse(value.email)?;
+        Ok(Self { name, email })
     }
 }
 
@@ -55,7 +59,7 @@ async fn insert_subscriber(
         VALUES ($1, $2, $3, $4)
         "#,
         subscribe_id,
-        new_subscriber.email,
+        new_subscriber.email.as_ref(),
         new_subscriber.name.as_ref(),
         Utc::now()
     )
