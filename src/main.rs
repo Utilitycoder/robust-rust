@@ -23,10 +23,12 @@ async fn main() -> std::io::Result<()> {
         .sender()
         .expect("Invalid sender email address.");
 
+    let timeout = configuration.email_client.timeout();
     let email_client = EmailClient::new(
         configuration.email_client.base_url,
         sender_email,
         configuration.email_client.authorization_token,
+        timeout
     );
 
     let listener = TcpListener::bind(address).expect("Failed to bind random port");
