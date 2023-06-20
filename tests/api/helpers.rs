@@ -6,6 +6,7 @@ use robust_rust::{
 };
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
+use wiremock::MockServer;
 
 // Ensure that the `tracing` stack is only initialized once using `Lazy`.
 static TRACING: Lazy<()> = Lazy::new(|| {
@@ -24,11 +25,26 @@ static TRACING: Lazy<()> = Lazy::new(|| {
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
+    pub mock_server: MockServer,
+}
+
+impl TestApp {
+    pub async fn post_subscriptions(&self, body: String) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(&format!("{}/subscriptions", &self.address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
 }
 
 #[allow(clippy::let_underscore_future)]
 pub async fn spawn_app() -> TestApp {
     Lazy::force(&TRACING);
+
+    let mock_server = MockServer::start().await;
 
     let configuration = {
         let mut c = get_configuration().expect("Failed to read configuration.");
@@ -53,6 +69,7 @@ pub async fn spawn_app() -> TestApp {
     TestApp {
         address,
         db_pool: get_connection_pool(&configuration.database),
+        mock_server,
     }
 }
 

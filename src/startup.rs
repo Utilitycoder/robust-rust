@@ -38,7 +38,6 @@ impl Application {
 
         let listener = TcpListener::bind(address)?;
         let port = listener.local_addr().unwrap().port();
-        println!("Port {}", port);
         let server = run(listener, connection_pool, email_client)?;
         Ok(Self { port, server })
     }
@@ -48,7 +47,6 @@ impl Application {
     }
 
     pub async fn run_until_stopped(self) -> Result<(), std::io::Error> {
-        println!("Server running on port {}", self.port);
         self.server.await
     }
 }
