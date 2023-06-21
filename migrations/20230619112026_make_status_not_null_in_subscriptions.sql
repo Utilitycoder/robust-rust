@@ -3,10 +3,6 @@
 -- in more details towards the end of this chapter!
 -- `sqlx` does not do it automatically for us.
 BEGIN;
--- Backfill `status` for historical entries
-UPDATE subscriptions
-SET status = 'confirmed'
-WHERE status IS NULL;
--- Make `status` mandatory
+UPDATE subscriptions SET status = 'confirmed' WHERE status IS NULL;
 ALTER TABLE subscriptions ALTER COLUMN status SET NOT NULL;
 COMMIT;
