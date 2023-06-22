@@ -3,6 +3,7 @@ use secrecy::{ExposeSecret, Secret};
 use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use sqlx::ConnectOptions;
+use std::convert::{TryFrom, TryInto};
 use tracing_log::log;
 
 #[derive(serde::Deserialize, Clone)]
@@ -73,12 +74,8 @@ impl DatabaseSettings {
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
     // Initialize our configuration reader
-    let mut settings = config::Config::default();
     let base_path = std::env::current_dir().expect("Failed to determine the current directory");
     let configuration_directory = base_path.join("configuration");
-
-    // Read the "default" configuration file
-    settings.merge(config::File::from(configuration_directory.join("base")).required(true))?;
 
     // Detect the running environment
     // Default to 'local' if unspecified
@@ -87,14 +84,17 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
         .try_into()
         .expect("APP_ENVIRONMENT must be 'local' or 'production'");
 
-    // Layer on environment specific values
-    settings.merge(
-        config::File::from(configuration_directory.join(environment.as_str())).required(true),
-    )?;
+    let environment_filename = format!("{}.yml", environment.as_str());
 
-    settings.merge(config::Environment::with_prefix("app").separator("__"))?;
+    let settings = config::Config::builder().add_source(
+        config::File::from(configuration_directory.join("base"),
+    )).add_source(
+        config::File::from(configuration_directory.join(environment_filename)),
+    ).add_source(
+        config::Environment::with_prefix("app").prefix_separator("_").separator("__"),
+    ).build()?;
 
-    settings.try_into()
+    settings.try_deserialize::<Settings>()
 }
 
 // The possible runtime environment for our application
@@ -105,7 +105,7 @@ pub enum Environment {
 }
 
 impl Environment {
-    pub fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             Environment::Local => "local",
             Environment::Production => "production",

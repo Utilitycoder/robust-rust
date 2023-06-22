@@ -1,5 +1,6 @@
 use actix_web::{web, HttpResponse};
-use sqlx::{PgPool, types::Uuid};
+use sqlx::PgPool;
+use uuid::Uuid;
 
 #[derive(serde::Deserialize)]
 pub struct Parameters {
@@ -10,7 +11,7 @@ pub struct Parameters {
 pub async fn confirm(parameters: web::Query<Parameters>, pool: web::Data<PgPool>) -> HttpResponse {
     let id = match get_subscriber_id_from_token(&parameters.subscription_token, &pool).await {
         Ok(id) => id,
-        Err(_) => return HttpResponse::BadRequest().finish(),
+        Err(_) => return HttpResponse::InternalServerError().finish(),
     };
     
     match id {

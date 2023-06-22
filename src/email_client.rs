@@ -44,9 +44,9 @@ impl EmailClient {
             text_body: text_content,
         };
 
-        let _builder = self
+        self
             .http_client
-            .post(url)
+            .post(&url)
             .header(
                 "X-Postmark-Server-Token",
                 self.authorization_token.expose_secret(),
@@ -62,11 +62,11 @@ impl EmailClient {
 #[derive(serde::Serialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct SendEmailRequest<'a> {
-    pub from: &'a str,
-    pub to: &'a str,
-    pub subject: &'a str,
-    pub html_body: &'a str,
-    pub text_body: &'a str,
+    from: &'a str,
+    to: &'a str,
+    subject: &'a str,
+    html_body: &'a str,
+    text_body: &'a str,
 }
 
 #[cfg(test)]

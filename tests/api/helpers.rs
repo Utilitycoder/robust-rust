@@ -50,10 +50,10 @@ impl TestApp {
             confirmation_link
         };
 
-        let html = get_link(body["html_body"].as_str().unwrap());
-        let plain_text = get_link(body["plain_text_body"].as_str().unwrap());
-
+        let html = get_link(body["HtmlBody"].as_str().unwrap());
+        let plain_text = get_link(body["TextBody"].as_str().unwrap());
         ConfirmationLinks { html, plain_text }
+
     }
 
     pub async fn post_subscriptions(&self, body: String) -> reqwest::Response {
@@ -77,6 +77,7 @@ pub async fn spawn_app() -> TestApp {
         let mut c = get_configuration().expect("Failed to read configuration.");
         c.database.database_name = Uuid::new_v4().to_string();
         c.application.port = 0; // random free port
+        c.email_client.base_url = mock_server.uri();
         c
     };
 

@@ -6,9 +6,9 @@ use crate::{
 use actix_web::{web, HttpResponse};
 use chrono::Utc;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
-
-use sqlx::types::Uuid;
 use sqlx::{PgPool, Postgres, Transaction};
+use std::convert::{TryInto, TryFrom};
+use uuid::Uuid;
 
 #[allow(dead_code)]
 #[derive(serde::Deserialize)]
@@ -27,12 +27,13 @@ impl TryFrom<FormData> for NewSubscriber {
     }
 }
 
+#[allow(clippy::async_yields_async)]
 #[tracing::instrument(
     name = "Adding a new subscriber",
     skip(form, pool, email_client, base_url),
     fields(
-        email = %form.email,
-        name = %form.name
+        subscriber_email = %form.email,
+        subscriber_name = %form.name
     )
 )]
 pub async fn subscribe(
@@ -43,13 +44,17 @@ pub async fn subscribe(
 ) -> HttpResponse {
     let new_subscriber = match form.0.try_into() {
         Ok(subscriber) => subscriber,
-        Err(e) => return HttpResponse::BadRequest().body(e),
+        Err(_) => return HttpResponse::BadRequest().finish(),
     };
 
     let mut transaction = match pool.begin().await {
         Ok(t) => t,
         Err(_) => return HttpResponse::InternalServerError().finish(),
     };
+
+    if search_for_existing_subscription(&new_subscriber, &mut transaction).await.is_err() {
+        return HttpResponse::InternalServerError().finish();
+    }
 
     let subscriber_id = match insert_subscriber(&new_subscriber, &mut transaction).await {
         Ok(id) => id,
@@ -58,7 +63,11 @@ pub async fn subscribe(
 
     let subscription_token = generate_subscription_token();
 
-    if store_token(subscriber_id, &subscription_token, &pool).await.is_err() {
+    if store_token(subscriber_id, &subscription_token, &mut transaction).await.is_err() {
+        return HttpResponse::InternalServerError().finish();
+    }
+
+    if transaction.commit().await.is_err() {
         return HttpResponse::InternalServerError().finish();
     }
 
@@ -66,10 +75,6 @@ pub async fn subscribe(
         .await
         .is_err()
     {
-        return HttpResponse::InternalServerError().finish();
-    }
-
-    if transaction.commit().await.is_err() {
         return HttpResponse::InternalServerError().finish();
     }
 
@@ -142,12 +147,12 @@ async fn insert_subscriber(
 /// Store subscription token in the database
 #[tracing::instrument(
     name = "Saving subscription token in the database",
-    skip(subscriber_id, subscription_token, pool)
+    skip(subscriber_id, subscription_token, transaction)
 )]
 async fn store_token(
     subscriber_id: Uuid,
     subscription_token: &str,
-    pool: &PgPool,
+    transaction: &mut Transaction <'_ , Postgres>
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
@@ -157,7 +162,7 @@ async fn store_token(
         subscription_token,
         subscriber_id,
     )
-    .execute(pool)
+    .execute(transaction)
     .await
     .map_err(|e| {
         tracing::error!("Failed to execute query: {:?}", e);
@@ -173,4 +178,26 @@ fn generate_subscription_token() -> String {
         .map(char::from)
         .take(25)
         .collect()
+}
+
+async fn search_for_existing_subscription(
+    new_subscriber: &NewSubscriber,
+    transaction: &mut Transaction<'_, Postgres>
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"
+        SELECT email, name
+        FROM subscriptions
+        WHERE email = $1 AND name = $2
+        "#,
+        new_subscriber.email.as_ref(),
+        new_subscriber.name.as_ref(),
+    )
+    .fetch_optional(transaction)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
+    Ok(())
 }
