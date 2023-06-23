@@ -27,6 +27,18 @@ pub async fn confirm(parameters: web::Query<Parameters>, pool: web::Data<PgPool>
 
 #[tracing::instrument(name = "Mark subscriber as confirmed", skip(pool, subscriber_id))]
 pub async fn confirm_subscriber(pool: &PgPool, subscriber_id: Uuid) -> Result<(), sqlx::Error> {
+    // check if id has already been confirmed
+    let confirmed = sqlx::query!(
+        r#"SELECT status FROM subscriptions WHERE id = $1"#,
+        subscriber_id
+    ).fetch_one(pool).await.map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?.status == "confirmed";
+    if confirmed {
+        return Err(sqlx::Error::RowNotFound);
+    }
+
     sqlx::query!(
         r#"UPDATE subscriptions SET status = 'confirmed' WHERE id = $1"#,
         subscriber_id

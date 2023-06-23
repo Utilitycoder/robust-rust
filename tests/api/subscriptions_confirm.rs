@@ -62,3 +62,32 @@ async fn clicking_on_the_confirmation_link_confirms_a_subscriber() {
     assert_eq!(saved.name, "le guin");
     assert_eq!(saved.status, "confirmed");
 }
+
+// Clicking the confirmation link twice responds with you've already been confirmed
+#[tokio::test]
+async fn clicking_the_confirmation_link_twice_returns_a_500() {
+    let app = spawn_app().await;
+    let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&app.mock_server)
+        .await;
+
+    app.post_subscriptions(body.into()).await;
+    let email_request = &app.mock_server.received_requests().await.unwrap()[0];
+    let confirmation_link = app.get_confirmation_links(email_request);
+
+    reqwest::get(confirmation_link.html.clone())
+        .await
+        .unwrap()
+        .error_for_status()
+        .unwrap();
+
+    let reponse = reqwest::get(confirmation_link.html.clone())
+        .await
+        .expect("Failed to execute request.");
+
+    assert_eq!(reponse.status().as_u16(), 500);
+}
