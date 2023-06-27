@@ -1,10 +1,35 @@
-use actix_web::{web, HttpResponse};
+use crate::routes::error_chain_fmt;
+use actix_web::{web, HttpResponse, ResponseError};
+use reqwest::StatusCode;
 use sqlx::PgPool;
 use uuid::Uuid;
 
 #[derive(serde::Deserialize)]
 pub struct Parameters {
     subscription_token: String,
+}
+
+#[derive(thiserror::Error)]
+pub enum ConfirmationError {
+    #[error(transparent)]
+    UnexpectedError(#[from] anyhow::Error),
+    #[error("Invalid subscription token.")]
+    InvalidToken,
+}
+
+impl ResponseError for ConfirmationError {
+    fn status_code(&self) -> StatusCode {
+        match self {
+            Self::UnexpectedError(_) => StatusCode::UNAUTHORIZED,
+            Self::InvalidToken => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
+impl std::fmt::Debug for ConfirmationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        error_chain_fmt(self, f)
+    }
 }
 
 #[tracing::instrument(name = "Confirm a pending subscriber", skip(parameters, pool))]
@@ -27,7 +52,6 @@ pub async fn confirm(parameters: web::Query<Parameters>, pool: web::Data<PgPool>
 
 #[tracing::instrument(name = "Mark subscriber as confirmed", skip(pool, subscriber_id))]
 pub async fn confirm_subscriber(pool: &PgPool, subscriber_id: Uuid) -> Result<(), sqlx::Error> {
-    // check if id has already been confirmed
     let confirmed = sqlx::query!(
         r#"SELECT status FROM subscriptions WHERE id = $1"#,
         subscriber_id
