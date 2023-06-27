@@ -13,7 +13,7 @@ pub async fn confirm(parameters: web::Query<Parameters>, pool: web::Data<PgPool>
         Ok(id) => id,
         Err(_) => return HttpResponse::InternalServerError().finish(),
     };
-    
+
     match id {
         None => HttpResponse::Unauthorized().finish(),
         Some(subscriber_id) => {
@@ -31,10 +31,15 @@ pub async fn confirm_subscriber(pool: &PgPool, subscriber_id: Uuid) -> Result<()
     let confirmed = sqlx::query!(
         r#"SELECT status FROM subscriptions WHERE id = $1"#,
         subscriber_id
-    ).fetch_one(pool).await.map_err(|e| {
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|e| {
         tracing::error!("Failed to execute query: {:?}", e);
         e
-    })?.status == "confirmed";
+    })?
+    .status
+        == "confirmed";
     if confirmed {
         return Err(sqlx::Error::RowNotFound);
     }
@@ -54,7 +59,10 @@ pub async fn confirm_subscriber(pool: &PgPool, subscriber_id: Uuid) -> Result<()
 
 /// Get subscriber token from the database
 #[tracing::instrument(name = "Getting subscriber ID from token", skip(token, pool))]
-async fn get_subscriber_id_from_token(token: &str, pool: &PgPool) -> Result<Option<Uuid>, sqlx::Error> {
+async fn get_subscriber_id_from_token(
+    token: &str,
+    pool: &PgPool,
+) -> Result<Option<Uuid>, sqlx::Error> {
     let result = sqlx::query!(
         r#"SELECT subscriber_id FROM subscription_tokens WHERE subscription_token = $1"#,
         token

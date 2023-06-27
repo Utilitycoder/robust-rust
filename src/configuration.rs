@@ -86,13 +86,17 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
 
     let environment_filename = format!("{}.yml", environment.as_str());
 
-    let settings = config::Config::builder().add_source(
-        config::File::from(configuration_directory.join("base"),
-    )).add_source(
-        config::File::from(configuration_directory.join(environment_filename)),
-    ).add_source(
-        config::Environment::with_prefix("app").prefix_separator("_").separator("__"),
-    ).build()?;
+    let settings = config::Config::builder()
+        .add_source(config::File::from(configuration_directory.join("base")))
+        .add_source(config::File::from(
+            configuration_directory.join(environment_filename),
+        ))
+        .add_source(
+            config::Environment::with_prefix("app")
+                .prefix_separator("_")
+                .separator("__"),
+        )
+        .build()?;
 
     settings.try_deserialize::<Settings>()
 }

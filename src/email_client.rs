@@ -44,8 +44,7 @@ impl EmailClient {
             text_body: text_content,
         };
 
-        self
-            .http_client
+        self.http_client
             .post(&url)
             .header(
                 "X-Postmark-Server-Token",
