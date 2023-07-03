@@ -3,6 +3,7 @@ use actix_web::http::header::{HeaderMap, HeaderValue};
 use actix_web::http::{header, StatusCode};
 use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
 use anyhow::Context;
+use argon2::{Algorithm, Argon2, Params, PasswordHash, PasswordVerifier, Version};
 use secrecy::{ExposeSecret, Secret};
 use sha3::Digest;
 use sqlx::PgPool;
@@ -152,21 +153,40 @@ async fn validate_credentials(
     credentials: Credentials,
     pool: &PgPool,
 ) -> Result<uuid::Uuid, PublishError> {
-    let password_hash = sha3::Sha3_256::digest(credentials.password.expose_secret().as_bytes());
-    let password_hash = format!("{:x}", password_hash);
+    let hasher = Argon2::new(
+        Algorithm::Argon2id,
+        Version::V0x13,
+        Params::new(15000, 2, 1, None)
+            .context("Failed to build Argon2 params")
+            .map_err(PublishError::UnexpectedError)?,
+    );
 
-    let user_id: Option<_> = sqlx::query!(
-        r#"SELECT user_id FROM users WHERE username = $1 AND password_hash = $2"#,
+    let row: Option<_> = sqlx::query!(
+        r#"SELECT user_id, password_hash, salt FROM users WHERE username = $1"#,
         credentials.username,
-        password_hash,
     )
     .fetch_optional(pool)
     .await
     .context("Failed to perform the query to validate auth credentials")
     .map_err(PublishError::UnexpectedError)?;
 
-    user_id
-        .map(|row| row.user_id)
-        .ok_or_else(|| anyhow::anyhow!("Invalid username or password"))
-        .map_err(PublishError::AuthError)
+    let (expected_password_hash, user_id, salt) = match row {
+        Some(row) => (row.password_hash, row.user_id, row.salt),
+        None => {
+            return Err(PublishError::AuthError(anyhow::anyhow!(
+                "Invalid username or password"
+            )))
+        }
+    };
+
+    let expected_password_hash = PasswordHash::new(&expected_password_hash)
+        .context("Failed to parse hash in PHC string format")
+        .map_err(PublishError::UnexpectedError)?;
+
+    Argon2::default().verify_password(
+        credentials.password.expose_secret().as_bytes(),
+        &expected_password_hash,
+    ).context("Failed to verify password").map_err(PublishError::UnexpectedError)?;
+
+    Ok(user_id)
 }

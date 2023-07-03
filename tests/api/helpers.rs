@@ -149,7 +149,7 @@ pub async fn spawn_app() -> TestApp {
         test_user: TestUser::generate(),
     };
 
-   test_app.test_user.store(&test_app.db_pool).await;
+    test_app.test_user.store(&test_app.db_pool).await;
     test_app
 }
 
