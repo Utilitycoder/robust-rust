@@ -1,11 +1,13 @@
-use crate::{domain::SubscriberEmail, email_client::EmailClient, routes::error_chain_fmt};
+use crate::{
+    domain::SubscriberEmail, email_client::EmailClient, routes::error_chain_fmt,
+    telemetry::spawn_blocking_with_tracing,
+};
 use actix_web::http::header::{HeaderMap, HeaderValue};
 use actix_web::http::{header, StatusCode};
 use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
 use anyhow::Context;
-use argon2::{Algorithm, Argon2, Params, PasswordHash, PasswordVerifier, Version};
+use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use secrecy::{ExposeSecret, Secret};
-use sha3::Digest;
 use sqlx::PgPool;
 
 #[derive(serde::Deserialize)]
@@ -149,44 +151,59 @@ fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Erro
     })
 }
 
+#[tracing::instrument(name = "Validate auth credentials", skip(credentials, pool))]
 async fn validate_credentials(
     credentials: Credentials,
     pool: &PgPool,
 ) -> Result<uuid::Uuid, PublishError> {
-    let hasher = Argon2::new(
-        Algorithm::Argon2id,
-        Version::V0x13,
-        Params::new(15000, 2, 1, None)
-            .context("Failed to build Argon2 params")
-            .map_err(PublishError::UnexpectedError)?,
-    );
+    let (user_id, expected_password_hash) = get_stored_credentials(&credentials.username, pool)
+        .await
+        .map_err(PublishError::UnexpectedError)?
+        .ok_or_else(|| PublishError::AuthError(anyhow::anyhow!("Unknown username")))?;
 
-    let row: Option<_> = sqlx::query!(
-        r#"SELECT user_id, password_hash, salt FROM users WHERE username = $1"#,
-        credentials.username,
+    let current_span = tracing::Span::current();
+    tokio::task::spawn_blocking(move || {
+        current_span.in_scope(|| verify_password_hash(expected_password_hash, credentials.password))
+    })
+    .await
+    .context("Failed to spawn blocking task")
+    .map_err(PublishError::UnexpectedError)?;
+
+    Ok(user_id)
+}
+
+#[tracing::instrument(
+    name = "Verify Password Hash",
+    skip(expected_password_hash, password_candidate)
+)]
+async fn verify_password_hash(
+    expected_password_hash: Secret<String>,
+    password_candidate: Secret<String>,
+) -> Result<(), PublishError> {
+    let expected_password_hash = PasswordHash::new(expected_password_hash.expose_secret())
+        .context("Failed to parse hash in PHC string format.")
+        .map_err(PublishError::UnexpectedError)?;
+    Argon2::default()
+        .verify_password(
+            password_candidate.expose_secret().as_bytes(),
+            &expected_password_hash,
+        )
+        .context("Invalid password.")
+        .map_err(PublishError::AuthError)
+}
+
+#[tracing::instrument(name = "Get stored credentials", skip(username, pool))]
+async fn get_stored_credentials(
+    username: &str,
+    pool: &PgPool,
+) -> Result<Option<(uuid::Uuid, Secret<String>)>, anyhow::Error> {
+    let row = sqlx::query!(
+        r#"SELECT user_id, password_hash FROM users WHERE username = $1"#,
+        username,
     )
     .fetch_optional(pool)
     .await
-    .context("Failed to perform the query to validate auth credentials")
-    .map_err(PublishError::UnexpectedError)?;
-
-    let (expected_password_hash, user_id, salt) = match row {
-        Some(row) => (row.password_hash, row.user_id, row.salt),
-        None => {
-            return Err(PublishError::AuthError(anyhow::anyhow!(
-                "Invalid username or password"
-            )))
-        }
-    };
-
-    let expected_password_hash = PasswordHash::new(&expected_password_hash)
-        .context("Failed to parse hash in PHC string format")
-        .map_err(PublishError::UnexpectedError)?;
-
-    Argon2::default().verify_password(
-        credentials.password.expose_secret().as_bytes(),
-        &expected_password_hash,
-    ).context("Failed to verify password").map_err(PublishError::UnexpectedError)?;
-
-    Ok(user_id)
+    .context("Failed to perform the query to validate auth credentials")?
+    .map(|row| (row.user_id, Secret::new(row.password_hash)));
+    Ok(row)
 }
