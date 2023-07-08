@@ -29,7 +29,7 @@ pub struct TestApp {
     pub db_pool: PgPool,
     pub mock_server: MockServer,
     pub port: u16,
-    test_user: TestUser,
+    pub test_user: TestUser,
 }
 
 impl TestApp {
