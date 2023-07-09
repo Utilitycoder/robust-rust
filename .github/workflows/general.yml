@@ -33,6 +33,10 @@ jobs:
         # Map service container ports to the host ports
         ports:
           - 5432:5432
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
 
     steps:
         # Downloads a copy of the code in your repository before running CI tests

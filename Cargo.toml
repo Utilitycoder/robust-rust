@@ -15,6 +15,7 @@ name = "robust-rust"
 [dependencies]
 actix-web = "4"
 actix-web-flash-messages = { version = "0.3", features = ["cookies"] }
+actix-session = { version = "0.7", features = ["redis-rs-tls-session"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 serde = {version = "1.0.163", features = ["derive"]}
 serde-aux = "4.2.0" 
