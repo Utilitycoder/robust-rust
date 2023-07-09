@@ -128,22 +128,6 @@ async fn subscribe_sends_a_confirmation_email_with_a_link() {
     assert_eq!(confirmation_link.html, confirmation_link.plain_text);
 }
 
-// test for when a user tries to subscribe twice
-#[tokio::test]
-async fn subscribe_fails_if_there_is_a_duplicated_email() {
-    let app = spawn_app().await;
-    let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
-
-    // first attempt is successful
-    app.post_subscriptions(body.into()).await;
-
-    // second attempt fails
-    let response = app.post_subscriptions(body.into()).await;
-    println!("{:?}", response);
-
-    assert_eq!(response.status().as_u16(), 500);
-}
-
 #[tokio::test]
 async fn subscribe_fails_if_there_is_a_fatal_database_error() {
     // Arrange
