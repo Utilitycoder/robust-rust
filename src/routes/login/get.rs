@@ -1,4 +1,3 @@
-use actix_web::cookie::{time::Duration, Cookie};
 use actix_web::{http::header::ContentType, HttpResponse};
 use actix_web_flash_messages::{IncomingFlashMessages, Level};
 use std::fmt::Write;
@@ -10,9 +9,9 @@ pub async fn login_form(flash_messages: IncomingFlashMessages) -> HttpResponse {
     }
 
     HttpResponse::Ok()
-    .content_type(ContentType::html())
-    .body(format!(
-        r#"<!DOCTYPE html>
+        .content_type(ContentType::html())
+        .body(format!(
+            r#"<!DOCTYPE html>
             <html lang="en">
             <head>
                 <meta http-equiv="content-type" content="text/html; charset=utf-8">
@@ -39,5 +38,5 @@ pub async fn login_form(flash_messages: IncomingFlashMessages) -> HttpResponse {
                 </form>
             </body>
             </html>"#,
-    ))
+        ))
 }

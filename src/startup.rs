@@ -1,13 +1,16 @@
 use crate::{
     configuration::{DatabaseSettings, Settings},
     email_client::EmailClient,
-    routes::{confirm, health_check, home, login, login_form, publish_newsletter, subscribe},
+    routes::{
+        admin_dashboard, confirm, health_check, home, login, login_form, publish_newsletter,
+        subscribe,
+    },
 };
+use actix_session::storage::RedisSessionStore;
+use actix_session::SessionMiddleware;
 use actix_web::{cookie::Key, dev::Server, web, App, HttpServer};
 use actix_web_flash_messages::storage::CookieMessageStore;
 use actix_web_flash_messages::FlashMessagesFramework;
-use actix_session::storage::RedisSessionStore;
-use actix_session::SessionMiddleware;
 use secrecy::{ExposeSecret, Secret};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
@@ -50,7 +53,8 @@ impl Application {
             configuration.application.base_url,
             configuration.application.hmac_secret,
             configuration.redis_uri,
-        ).await?;
+        )
+        .await?;
         Ok(Self { port, server })
     }
 
@@ -83,15 +87,17 @@ async fn run(
     let email_client = web::Data::new(email_client);
     let secret_key = Key::from(hmac_secret.expose_secret().as_bytes());
     let base_url = web::Data::new(ApplicationBaseUrl(base_url));
-    let message_store =
-        CookieMessageStore::builder(secret_key.clone()).build();
+    let message_store = CookieMessageStore::builder(secret_key.clone()).build();
     let message_framework = FlashMessagesFramework::builder(message_store).build();
     let redis_store = RedisSessionStore::new(redis_uri.expose_secret()).await?;
     let server = HttpServer::new(move || {
         App::new()
             // Middleware logger added here
             .wrap(message_framework.clone())
-            .wrap(SessionMiddleware::new(redis_store.clone(), secret_key.clone()))
+            .wrap(SessionMiddleware::new(
+                redis_store.clone(),
+                secret_key.clone(),
+            ))
             .wrap(TracingLogger::default())
             .route("/health_check", web::get().to(health_check))
             .route("/subscriptions", web::post().to(subscribe))
@@ -100,6 +106,7 @@ async fn run(
             .route("/", web::get().to(home))
             .route("/login", web::get().to(login_form))
             .route("/login", web::post().to(login))
+            .route("/admin/dashboard", web::get().to(admin_dashboard))
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
             .app_data(base_url.clone())
