@@ -120,6 +120,15 @@ impl TestApp {
             .await
             .expect("Failed to execute request.")
     }
+
+    pub async fn get_change_password_html(&self) -> String {
+        self.get_change_password()
+            .await
+            .text()
+            .await
+            .expect("Failed to get response text.")
+    }
+
     pub async fn post_change_password<Body>(&self, body: &Body) -> reqwest::Response
     where
         Body: serde::Serialize,
