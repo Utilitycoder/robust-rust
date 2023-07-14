@@ -11,13 +11,8 @@ use sqlx::PgPool;
 #[derive(serde::Deserialize)]
 pub struct BodyData {
     title: String,
-    content: Content,
-}
-
-#[derive(serde::Deserialize)]
-pub struct Content {
-    html: String,
-    text: String,
+    text_content: String,
+    html_content: String,
 }
 
 #[tracing::instrument(
@@ -39,14 +34,16 @@ pub async fn publish_newsletter(
                     .send_email(
                         &subscriber.email,
                         &body.title,
-                        &body.content.html,
-                        &body.content.text,
+                        &body.html_content,
+                        &body.text_content,
                     )
                     .await
                     .with_context(|| {
                         format!("Failed to send newsletter issue to {}", subscriber.email)
-                    }).map_err(e500)?;
+                    })
+                    .map_err(e500)?;
             }
+
             Err(error) => {
                 tracing::warn!(
                     error.cause_chain = ?error,
