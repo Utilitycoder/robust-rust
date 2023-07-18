@@ -1,5 +1,4 @@
 use actix_web::http::header::LOCATION;
-use actix_web::http::StatusCode;
 use actix_web::HttpResponse;
 
 // Return a 400 with the user-representation of the validation error as body.

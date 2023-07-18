@@ -3,8 +3,6 @@ use actix_web::HttpResponse;
 use actix_web_flash_messages::IncomingFlashMessages;
 use std::fmt::Write;
 
-use crate::idempotency;
-
 pub async fn publish_newsletter_form(
     flash_messages: IncomingFlashMessages,
 ) -> Result<HttpResponse, actix_web::Error> {

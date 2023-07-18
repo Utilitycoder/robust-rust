@@ -3,9 +3,9 @@ use argon2::{Argon2, PasswordHasher};
 use once_cell::sync::Lazy;
 use robust_rust::{
     configuration::{get_configuration, DatabaseSettings},
+    email_client::EmailClient,
     startup::{get_connection_pool, Application},
     telemetry::{get_subscriber, init_subscriber},
-    email_client::EmailClient,
 };
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
