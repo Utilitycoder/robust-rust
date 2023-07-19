@@ -70,8 +70,10 @@ pub async fn publish_newsletter(
 }
 
 fn success_message() -> FlashMessage {
-    FlashMessage::info("The newsletter issue has been accepted - \
-    emails will go out shortly.",)
+    FlashMessage::info(
+        "The newsletter issue has been accepted - \
+    emails will go out shortly.",
+    )
 }
 
 #[tracing::instrument(skip_all)]

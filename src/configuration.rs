@@ -34,10 +34,16 @@ pub struct EmailClientSettings {
 
 impl EmailClientSettings {
     pub fn client(self) -> EmailClient {
-        let sender = self.sender().expect("Invalid sender email address");
+        let sender_email = self.sender().expect("Invalid sender email address");
         let timeout = std::time::Duration::from_millis(self.timeout_ms);
-        EmailClient::new(self.base_url, sender, self.authorization_token, timeout)
+        EmailClient::new(
+            self.base_url,
+            sender_email,
+            self.authorization_token,
+            timeout,
+        )
     }
+
     pub fn sender(&self) -> Result<SubscriberEmail, String> {
         SubscriberEmail::parse(self.sender_email.clone())
     }
