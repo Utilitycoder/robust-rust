@@ -171,8 +171,10 @@ async fn newsletter_creation_is_idempotent() {
 
     // Act - Part 2 - Follow the redirect
     let html_page = app.get_publish_newsletter_html().await;
-    assert!(html_page.contains("<p><i>The newsletter issue has been accepted - \
-        emails will go out shortly.</i></p>"));
+    assert!(html_page.contains(
+        "<p><i>The newsletter issue has been accepted - \
+        emails will go out shortly.</i></p>"
+    ));
 
     // Act - Part 3 - Submit newsletter form **again**
     let response = app.post_publish_newsletters(&newsletter_request_body).await;
@@ -180,8 +182,10 @@ async fn newsletter_creation_is_idempotent() {
 
     // Act - Part 4 - Follow the redirect
     let html_page = app.get_publish_newsletter_html().await;
-    assert!(html_page.contains("<p><i>The newsletter issue has been accepted - \
-    emails will go out shortly.</i></p>"));
+    assert!(html_page.contains(
+        "<p><i>The newsletter issue has been accepted - \
+    emails will go out shortly.</i></p>"
+    ));
 
     app.dispatch_all_pending_emails().await;
     // Mock verifies on Drop that we have sent the newsletter email **once**
