@@ -5,7 +5,7 @@ use fake::Fake;
 use std::time::Duration;
 use uuid::Uuid;
 use wiremock::matchers::{any, method, path};
-use wiremock::{Mock, MockBuilder, ResponseTemplate};
+use wiremock::{Mock, ResponseTemplate};
 
 async fn create_unconfirmed_subscriber(app: &TestApp) -> ConfirmationLinks {
     let name = Name().fake::<String>();
@@ -46,10 +46,6 @@ async fn create_confirmed_subscriber(app: &TestApp) {
         .unwrap();
 }
 
-fn when_sending_an_email() -> MockBuilder {
-    Mock::given(path("/email")).and(method("POST"))
-}
-
 #[tokio::test]
 async fn you_must_be_logged_in_to_see_the_newsletter_form() {
     // Arrange
@@ -70,7 +66,7 @@ async fn you_must_be_logged_in_to_publish_a_newsletter() {
             "title": "Newsletter title",
             "text_content": "Newsletter content",
             "html_content": "<p>Newsletter content</p>",
-            "idempotency_key": uuid::Uuid::new_v4().to_string()
+            "idempotency_key": Uuid::new_v4().to_string()
         }
     );
 
@@ -97,7 +93,7 @@ async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
             "title": "Newsletter title",
             "text_content": "Newsletter content",
             "html_content": "<p>Newsletter content</p>",
-            "idempotency_key": uuid::Uuid::new_v4().to_string()
+            "idempotency_key": Uuid::new_v4().to_string()
         }
     );
 
@@ -130,7 +126,7 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
         "title": "Newsletter title",
         "text_content": "Newsletter body as plain text",
         "html_content": "<p>Newsletter body as HTML</p>",
-        "idempotency_key": uuid::Uuid::new_v4().to_string()
+        "idempotency_key": Uuid::new_v4().to_string()
     });
 
     let response = app.post_publish_newsletters(&newsletter_request_body).await;
@@ -167,7 +163,7 @@ async fn newsletter_creation_is_idempotent() {
         "html_content": "<p>Newsletter body as HTML</p>",
         // We expect the idempotency key as part of the
         // form data, not as an header
-        "idempotency_key": uuid::Uuid::new_v4().to_string()
+        "idempotency_key": Uuid::new_v4().to_string()
     });
 
     let response = app.post_publish_newsletters(&newsletter_request_body).await;
@@ -208,7 +204,7 @@ async fn concurrent_form_submission_is_handled_gracefully() {
         "title": "Newsletter title",
         "text_content": "Newsletter body as plain text",
         "html_content": "<p>Newsletter body as HTML</p>",
-        "idempotency_key": uuid::Uuid::new_v4().to_string()
+        "idempotency_key": Uuid::new_v4().to_string()
     });
 
     let response_1 = app.post_publish_newsletters(&newsletter_request_body);

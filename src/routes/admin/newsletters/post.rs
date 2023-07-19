@@ -10,7 +10,7 @@ use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 #[derive(serde::Deserialize)]
-pub struct FormData {
+pub struct NewsletterContent {
     title: String,
     text_content: String,
     html_content: String,
@@ -23,12 +23,12 @@ name = "Publish a newsletter issue",
     fields(user_id = %*user_id)
 )]
 pub async fn publish_newsletter(
-    form: web::Form<FormData>,
+    form: web::Form<NewsletterContent>,
     pool: web::Data<PgPool>,
     user_id: ReqData<UserId>,
 ) -> Result<HttpResponse, actix_web::Error> {
     let user_id = user_id.into_inner();
-    let FormData {
+    let NewsletterContent {
         title,
         text_content,
         html_content,
