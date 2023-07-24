@@ -80,8 +80,9 @@ impl DatabaseSettings {
     }
 
     pub fn with_db(&self) -> PgConnectOptions {
-        let mut options = self.without_db().database(&self.database_name);
-        options.log_statements(log::LevelFilter::Trace);
+        let options = self.without_db().database(&self.database_name);
+        let cloned_option = options.clone();
+        cloned_option.log_statements(log::LevelFilter::Trace);
         options
     }
 }

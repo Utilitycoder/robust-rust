@@ -163,7 +163,7 @@ async fn insert_subscriber(
         new_subscriber.name.as_ref(),
         Utc::now()
     )
-    .execute(transaction)
+    .execute(&mut *(*transaction))
     .await?;
     Ok(subscriber_id)
 }
@@ -186,7 +186,7 @@ async fn store_token(
         subscription_token,
         subscriber_id,
     )
-    .execute(transaction)
+    .execute(&mut *(*transaction))
     .await
     .map_err(StoreTokenError)?;
     Ok(())
@@ -214,7 +214,7 @@ async fn search_for_existing_subscription(
         new_subscriber.email.as_ref(),
         new_subscriber.name.as_ref(),
     )
-    .fetch_optional(transaction)
+    .fetch_optional(&mut *(*transaction))
     .await?;
     Ok(())
 }

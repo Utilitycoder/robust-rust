@@ -74,6 +74,7 @@ async fn dequeue_task(
     pool: &PgPool,
 ) -> Result<Option<(PgTransaction, Uuid, String)>, anyhow::Error> {
     let mut transaction = pool.begin().await?;
+
     let r = sqlx::query!(
         r#"
             SELECT newsletter_issue_id, subscriber_email
@@ -83,7 +84,7 @@ async fn dequeue_task(
             LIMIT 1
         "#,
     )
-    .fetch_optional(&mut transaction)
+    .fetch_optional(&mut *transaction)
     .await?;
     if let Some(r) = r {
         Ok(Some((
@@ -112,7 +113,7 @@ async fn delete_task(
         issue_id,
         email
     )
-    .execute(&mut transaction)
+    .execute(&mut *transaction)
     .await?;
     transaction.commit().await?;
     Ok(())

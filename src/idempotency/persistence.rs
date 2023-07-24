@@ -89,7 +89,7 @@ pub async fn save_response(
         headers,
         body.as_ref(),
     )
-    .execute(&mut transaction)
+    .execute(&mut *transaction)
     .await?;
     transaction.commit().await?;
 
@@ -121,7 +121,7 @@ pub async fn try_processing(
         user_id,
         idempotency_key.as_ref()
     )
-    .execute(&mut transaction)
+    .execute(&mut *transaction)
     .await?
     .rows_affected();
 
