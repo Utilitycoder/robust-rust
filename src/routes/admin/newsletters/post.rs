@@ -78,7 +78,7 @@ fn success_message() -> FlashMessage {
 
 #[tracing::instrument(skip_all)]
 async fn insert_newsletter_issue(
-    transaction:  &mut Transaction<'_, Postgres>,
+    transaction: &mut Transaction<'_, Postgres>,
     title: &str,
     text_content: &str,
     html_content: &str,
