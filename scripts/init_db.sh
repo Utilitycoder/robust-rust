@@ -22,6 +22,8 @@ DB_PASSWORD="${POSTGRES_PASSWORD:=password}"
 DB_NAME="${POSTGRES_DB:=newsletter}"
 # Check if a custom port has been set, otherwise default to '5432'
 DB_PORT="${POSTGRES_PORT:=5432}"
+# stop postgres if it's already running
+sudo systemctl stop postgresql
 # Launch postgres using Docker
 docker run \
     -e POSTGRES_USER=${DB_USER} \
