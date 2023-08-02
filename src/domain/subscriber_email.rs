@@ -12,6 +12,7 @@ impl SubscriberEmail {
     }
 }
 
+// Gain access to the inner String by implementing AsRef<str>.
 impl AsRef<str> for SubscriberEmail {
     fn as_ref(&self) -> &str {
         &self.0

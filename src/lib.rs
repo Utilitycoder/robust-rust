@@ -1,3 +1,4 @@
+// Purpose: Main library file for the application.
 pub mod authentication;
 pub mod configuration;
 pub mod domain;

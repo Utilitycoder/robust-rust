@@ -1,6 +1,8 @@
 use anyhow::Context;
-use argon2::password_hash::SaltString;
-use argon2::{Algorithm, Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier, Version};
+use argon2::{
+    password_hash::SaltString, Algorithm, Argon2, Params, PasswordHash, PasswordHasher,
+    PasswordVerifier, Version,
+};
 use secrecy::{ExposeSecret, Secret};
 use sqlx::PgPool;
 
@@ -24,6 +26,7 @@ async fn get_stored_credentials(
     username: &str,
     pool: &PgPool,
 ) -> Result<Option<(uuid::Uuid, Secret<String>)>, anyhow::Error> {
+    // Retrieve the user's id and password hash from the database.
     let row = sqlx::query!(
         r#"
         SELECT user_id, password_hash
@@ -52,6 +55,7 @@ pub async fn validate_credentials(
             .to_string(),
     );
 
+    // conditionally assign stored_user_id and stored_password_hash
     if let Some((stored_user_id, stored_password_hash)) =
         get_stored_credentials(&credentials.username, pool).await?
     {
