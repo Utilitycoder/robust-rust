@@ -1,11 +1,8 @@
-use crate::session_state::TypedSession;
-use crate::utils::e500;
-use actix_web::http::header::ContentType;
-use actix_web::{web, HttpResponse};
+use crate::{session_state::TypedSession, utils::e500};
+use actix_web::{http::header::ContentType, web, HttpResponse};
 use anyhow::Context;
 use sqlx::PgPool;
 use uuid::Uuid;
-// Return an opaque 500 while preserving the error's root cause for logging.
 
 pub async fn admin_dashboard(
     session: TypedSession,

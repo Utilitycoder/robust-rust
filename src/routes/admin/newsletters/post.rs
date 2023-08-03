@@ -1,9 +1,9 @@
-use crate::authentication::UserId;
-use crate::idempotency::IdempotencyKey;
-use crate::idempotency::{get_saved_response, save_response, try_processing, NextAction};
-use crate::utils::{e400, e500, see_other};
-use actix_web::web::ReqData;
-use actix_web::{web, HttpResponse};
+use crate::{
+    authentication::UserId,
+    idempotency::{get_saved_response, save_response, try_processing, IdempotencyKey, NextAction},
+    utils::{e400, e500, see_other},
+};
+use actix_web::{web, web::ReqData, HttpResponse};
 use actix_web_flash_messages::FlashMessage;
 use anyhow::Context;
 use sqlx::{PgPool, Postgres, Transaction};

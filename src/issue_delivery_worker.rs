@@ -1,6 +1,7 @@
-use crate::domain::SubscriberEmail;
-use crate::email_client::EmailClient;
-use crate::{configuration::Settings, startup::get_connection_pool};
+use crate::{
+    configuration::Settings, domain::SubscriberEmail, email_client::EmailClient,
+    startup::get_connection_pool,
+};
 use sqlx::{PgPool, Postgres, Transaction};
 use std::time::Duration;
 use tracing::{field::display, Span};

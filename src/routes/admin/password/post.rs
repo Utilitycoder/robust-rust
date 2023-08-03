@@ -1,7 +1,8 @@
-use crate::authentication::UserId;
-use crate::authentication::{validate_credentials, AuthError, Credentials};
-use crate::routes::admin::dashboard::get_username;
-use crate::utils::{e500, see_other};
+use crate::{
+    authentication::{validate_credentials, AuthError, Credentials, UserId},
+    routes::admin::dashboard::get_username,
+    utils::{e500, see_other},
+};
 use actix_web::{web, HttpResponse};
 use actix_web_flash_messages::FlashMessage;
 use secrecy::{ExposeSecret, Secret};
