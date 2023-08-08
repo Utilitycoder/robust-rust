@@ -29,12 +29,14 @@ impl std::fmt::Display for SubscriberEmail {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use claim::{assert_err, assert_ok};
     use fake::faker::internet::en::SafeEmail;
     use fake::Fake;
     use quickcheck::Gen;
-    use rand::{rngs::StdRng, SeedableRng};
+    use rand::rngs::StdRng;
+    use rand::SeedableRng;
+
+    use super::*;
 
     #[test]
     fn empty_string_is_rejected() {

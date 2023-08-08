@@ -1,6 +1,8 @@
-use actix_web::{http::header::ContentType, HttpResponse};
-use actix_web_flash_messages::IncomingFlashMessages;
 use std::fmt::Write;
+
+use actix_web::http::header::ContentType;
+use actix_web::HttpResponse;
+use actix_web_flash_messages::IncomingFlashMessages;
 
 pub async fn publish_newsletter_form(
     flash_messages: IncomingFlashMessages,
@@ -10,10 +12,8 @@ pub async fn publish_newsletter_form(
         writeln!(incoming_flash, "<p><i>{}</i></p>", message.content()).unwrap();
     }
     let idempotency_key = uuid::Uuid::new_v4().to_string();
-    Ok(HttpResponse::Ok()
-        .content_type(ContentType::html())
-        .body(format!(
-            r#"<!DOCTYPE html>
+    Ok(HttpResponse::Ok().content_type(ContentType::html()).body(format!(
+        r#"<!DOCTYPE html>
                 <html lang="en">
                 <head>
                     <meta http-equiv="content-type" content="text/html; charset=utf-8">
@@ -54,5 +54,5 @@ pub async fn publish_newsletter_form(
                     <p><a href="/admin/dashboard">&lt;- Back</a></p>
                 </body>
                 </html>"#,
-        )))
+    )))
 }

@@ -1,11 +1,13 @@
-use crate::helpers::{assert_is_redirected_to, spawn_app, ConfirmationLinks, TestApp};
+use std::time::Duration;
+
 use fake::faker::internet::en::SafeEmail;
 use fake::faker::name::en::Name;
 use fake::Fake;
-use std::time::Duration;
 use uuid::Uuid;
 use wiremock::matchers::{any, method, path};
 use wiremock::{Mock, ResponseTemplate};
+
+use crate::helpers::{assert_is_redirected_to, spawn_app, ConfirmationLinks, TestApp};
 
 async fn create_unconfirmed_subscriber(app: &TestApp) -> ConfirmationLinks {
     let name = Name().fake::<String>();
@@ -21,29 +23,16 @@ async fn create_unconfirmed_subscriber(app: &TestApp) -> ConfirmationLinks {
         .mount_as_scoped(&app.mock_server)
         .await;
 
-    app.post_subscriptions(body)
-        .await
-        .error_for_status()
-        .unwrap();
+    app.post_subscriptions(body).await.error_for_status().unwrap();
 
-    let email_request = &app
-        .mock_server
-        .received_requests()
-        .await
-        .unwrap()
-        .pop()
-        .unwrap();
+    let email_request = &app.mock_server.received_requests().await.unwrap().pop().unwrap();
     app.get_confirmation_links(email_request)
 }
 
 async fn create_confirmed_subscriber(app: &TestApp) {
     let confirmation_links = create_unconfirmed_subscriber(app).await;
 
-    reqwest::get(confirmation_links.html)
-        .await
-        .unwrap()
-        .error_for_status()
-        .unwrap();
+    reqwest::get(confirmation_links.html).await.unwrap().error_for_status().unwrap();
 }
 
 #[tokio::test]
@@ -102,8 +91,7 @@ async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
 
     let html_page = app.get_publish_newsletter_html().await;
     assert!(html_page.contains(
-        "<p><i>The newsletter issue has been accepted - \
-        emails will go out shortly.</i></p>"
+        "<p><i>The newsletter issue has been accepted - emails will go out shortly.</i></p>"
     ));
 
     app.dispatch_all_pending_emails().await;
@@ -134,8 +122,7 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
 
     let html_page = app.get_publish_newsletter_html().await;
     assert!(html_page.contains(
-        "<p><i>The newsletter issue has been accepted - \
-        emails will go out shortly.</i></p>"
+        "<p><i>The newsletter issue has been accepted - emails will go out shortly.</i></p>"
     ));
 
     app.dispatch_all_pending_emails().await;
@@ -172,8 +159,7 @@ async fn newsletter_creation_is_idempotent() {
     // Act - Part 2 - Follow the redirect
     let html_page = app.get_publish_newsletter_html().await;
     assert!(html_page.contains(
-        "<p><i>The newsletter issue has been accepted - \
-        emails will go out shortly.</i></p>"
+        "<p><i>The newsletter issue has been accepted - emails will go out shortly.</i></p>"
     ));
 
     // Act - Part 3 - Submit newsletter form **again**
@@ -183,8 +169,7 @@ async fn newsletter_creation_is_idempotent() {
     // Act - Part 4 - Follow the redirect
     let html_page = app.get_publish_newsletter_html().await;
     assert!(html_page.contains(
-        "<p><i>The newsletter issue has been accepted - \
-    emails will go out shortly.</i></p>"
+        "<p><i>The newsletter issue has been accepted - emails will go out shortly.</i></p>"
     ));
 
     app.dispatch_all_pending_emails().await;
@@ -216,10 +201,7 @@ async fn concurrent_form_submission_is_handled_gracefully() {
     let (response1, response2) = tokio::join!(response_1, response_2);
 
     assert_eq!(response1.status(), response2.status());
-    assert_eq!(
-        response1.text().await.unwrap(),
-        response2.text().await.unwrap()
-    );
+    assert_eq!(response1.text().await.unwrap(), response2.text().await.unwrap());
 
     app.dispatch_all_pending_emails().await;
 }

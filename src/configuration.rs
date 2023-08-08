@@ -1,10 +1,13 @@
-use crate::{domain::SubscriberEmail, email_client::EmailClient};
+use std::convert::{TryFrom, TryInto};
+
 use secrecy::{ExposeSecret, Secret};
 use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use sqlx::ConnectOptions;
-use std::convert::{TryFrom, TryInto};
 use tracing_log::log;
+
+use crate::domain::SubscriberEmail;
+use crate::email_client::EmailClient;
 
 #[derive(serde::Deserialize, Clone)]
 pub struct Settings {
@@ -35,12 +38,7 @@ impl EmailClientSettings {
     pub fn client(self) -> EmailClient {
         let sender_email = self.sender().expect("Invalid sender email address");
         let timeout = std::time::Duration::from_millis(self.timeout_ms);
-        EmailClient::new(
-            self.base_url,
-            sender_email,
-            self.authorization_token,
-            timeout,
-        )
+        EmailClient::new(self.base_url, sender_email, self.authorization_token, timeout)
     }
 
     pub fn sender(&self) -> Result<SubscriberEmail, String> {
@@ -65,11 +63,7 @@ pub struct DatabaseSettings {
 
 impl DatabaseSettings {
     pub fn without_db(&self) -> PgConnectOptions {
-        let ssl_mode = if self.require_ssl {
-            PgSslMode::Require
-        } else {
-            PgSslMode::Prefer
-        };
+        let ssl_mode = if self.require_ssl { PgSslMode::Require } else { PgSslMode::Prefer };
         PgConnectOptions::new()
             .host(&self.host)
             .username(&self.username)
@@ -102,14 +96,8 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
 
     let settings = config::Config::builder()
         .add_source(config::File::from(configuration_directory.join("base")))
-        .add_source(config::File::from(
-            configuration_directory.join(environment_filename),
-        ))
-        .add_source(
-            config::Environment::with_prefix("app")
-                .prefix_separator("_")
-                .separator("__"),
-        )
+        .add_source(config::File::from(configuration_directory.join(environment_filename)))
+        .add_source(config::Environment::with_prefix("app").prefix_separator("_").separator("__"))
         .build()?;
 
     settings.try_deserialize::<Settings>()

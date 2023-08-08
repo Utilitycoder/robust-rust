@@ -1,6 +1,7 @@
-use crate::helpers::spawn_app;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, ResponseTemplate};
+
+use crate::helpers::spawn_app;
 
 #[tokio::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
@@ -90,10 +91,7 @@ async fn subscribe_returns_a_400_when_fields_are_present_but_empty() {
     let test_cases = vec![
         ("name=&email=ursula_le_guin%40gmail.com", "empty name"),
         ("name=le%20guin&email=", "empty email"),
-        (
-            "name=le%20guin&email=definitely_not_an_email",
-            "invalid email",
-        ),
+        ("name=le%20guin&email=definitely_not_an_email", "invalid email"),
     ];
     for (invalid_body, error_message) in test_cases {
         // Act

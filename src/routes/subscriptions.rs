@@ -1,15 +1,17 @@
-use crate::{
-    domain::{NewSubscriber, SubscriberEmail, SubscriberName},
-    email_client::EmailClient,
-    startup::ApplicationBaseUrl,
-};
-use actix_web::{http::StatusCode, web, HttpResponse, ResponseError};
+use std::convert::{TryFrom, TryInto};
+
+use actix_web::http::StatusCode;
+use actix_web::{web, HttpResponse, ResponseError};
 use anyhow::Context;
 use chrono::Utc;
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
 use sqlx::{PgPool, Postgres, Transaction};
-use std::convert::{TryFrom, TryInto};
 use uuid::Uuid;
+
+use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
+use crate::email_client::EmailClient;
+use crate::startup::ApplicationBaseUrl;
 
 #[allow(dead_code)]
 #[derive(serde::Deserialize)]
@@ -45,15 +47,9 @@ pub async fn subscribe(
 ) -> Result<HttpResponse, SubscribeError> {
     let new_subscriber = form.0.try_into().map_err(SubscribeError::ValidationError)?;
 
-    let mut transaction = pool
-        .begin()
-        .await
-        .context("Failed to acquire a Postgres connection")?;
+    let mut transaction = pool.begin().await.context("Failed to acquire a Postgres connection")?;
 
-    if search_for_existing_subscription(&new_subscriber, &mut transaction)
-        .await
-        .is_err()
-    {
+    if search_for_existing_subscription(&new_subscriber, &mut transaction).await.is_err() {
         return Err(SubscribeError::ValidationError(
             "The provided email is already subscribed".into(),
         ));
@@ -69,19 +65,11 @@ pub async fn subscribe(
         .await
         .context("Failed to store the confirmation token for a new subscriber.")?;
 
-    transaction
-        .commit()
-        .await
-        .context("Failed to commit SQL transaction")?;
+    transaction.commit().await.context("Failed to commit SQL transaction")?;
 
-    send_confirmation_email(
-        &email_client,
-        new_subscriber,
-        &base_url.0,
-        &subscription_token,
-    )
-    .await
-    .context("Failed to send a confirmation email.")?;
+    send_confirmation_email(&email_client, new_subscriber, &base_url.0, &subscription_token)
+        .await
+        .context("Failed to send a confirmation email.")?;
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -119,13 +107,11 @@ pub async fn send_confirmation_email(
     base_url: &str,
     subscription_token: &str,
 ) -> Result<(), reqwest::Error> {
-    let confirmation_link = format!(
-        "{}/subscriptions/confirm?subscription_token={}",
-        base_url, subscription_token
-    );
+    let confirmation_link =
+        format!("{}/subscriptions/confirm?subscription_token={}", base_url, subscription_token);
     let html_body_text = format!(
-        "Welcome to our newsletter!<br />\
-    Click <a href=\"{}\">here</a> to confirm your subscription.",
+        "Welcome to our newsletter!<br />Click <a href=\"{}\">here</a> to confirm your \
+         subscription.",
         confirmation_link
     );
 
@@ -135,12 +121,7 @@ pub async fn send_confirmation_email(
     );
 
     email_client
-        .send_email(
-            &new_subscriber.email,
-            "Welcome!",
-            &html_body_text,
-            &plain_body_text,
-        )
+        .send_email(&new_subscriber.email, "Welcome!", &html_body_text, &plain_body_text)
         .await
 }
 
@@ -195,10 +176,7 @@ async fn store_token(
 /// Gnerate a random 25 character-long case-sensitive subscription token
 fn generate_subscription_token() -> String {
     let mut rng = thread_rng();
-    std::iter::repeat_with(|| rng.sample(Alphanumeric))
-        .map(char::from)
-        .take(25)
-        .collect()
+    std::iter::repeat_with(|| rng.sample(Alphanumeric)).map(char::from).take(25).collect()
 }
 
 async fn search_for_existing_subscription(
@@ -235,10 +213,7 @@ impl std::error::Error for StoreTokenError {
 
 impl std::fmt::Display for StoreTokenError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "A database failure was encountered while trying to store a subscription token."
-        )
+        write!(f, "A database failure was encountered while trying to store a subscription token.")
     }
 }
 

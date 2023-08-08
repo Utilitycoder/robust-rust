@@ -1,13 +1,15 @@
-use crate::{
-    authentication::UserId,
-    idempotency::{get_saved_response, save_response, try_processing, IdempotencyKey, NextAction},
-    utils::{e400, e500, see_other},
-};
-use actix_web::{web, web::ReqData, HttpResponse};
+use actix_web::web::ReqData;
+use actix_web::{web, HttpResponse};
 use actix_web_flash_messages::FlashMessage;
 use anyhow::Context;
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
+
+use crate::authentication::UserId;
+use crate::idempotency::{
+    get_saved_response, save_response, try_processing, IdempotencyKey, NextAction,
+};
+use crate::utils::{e400, e500, see_other};
 
 #[derive(serde::Deserialize)]
 pub struct NewsletterContent {
@@ -28,27 +30,19 @@ pub async fn publish_newsletter(
     user_id: ReqData<UserId>,
 ) -> Result<HttpResponse, actix_web::Error> {
     let user_id = user_id.into_inner();
-    let NewsletterContent {
-        title,
-        text_content,
-        html_content,
-        idempotency_key,
-    } = form.0;
+    let NewsletterContent { title, text_content, html_content, idempotency_key } = form.0;
     let idempotency_key: IdempotencyKey = idempotency_key.try_into().map_err(e400)?;
-    let mut transaction = match try_processing(&pool, &idempotency_key, *user_id)
-        .await
-        .map_err(e500)?
-    {
-        NextAction::StartProcessing(t) => t,
-        NextAction::ReturnSavedResponse(saved_response) => {
-            success_message().send();
-            return Ok(saved_response);
-        }
-    };
+    let mut transaction =
+        match try_processing(&pool, &idempotency_key, *user_id).await.map_err(e500)? {
+            NextAction::StartProcessing(t) => t,
+            NextAction::ReturnSavedResponse(saved_response) => {
+                success_message().send();
+                return Ok(saved_response);
+            }
+        };
 
-    if let Some(save_response) = get_saved_response(&pool, &idempotency_key, *user_id)
-        .await
-        .map_err(e500)?
+    if let Some(save_response) =
+        get_saved_response(&pool, &idempotency_key, *user_id).await.map_err(e500)?
     {
         return Ok(save_response);
     }
@@ -62,18 +56,14 @@ pub async fn publish_newsletter(
         .map_err(e500)?;
 
     let response = see_other("/admin/newsletters");
-    let response = save_response(transaction, &idempotency_key, *user_id, response)
-        .await
-        .map_err(e500)?;
+    let response =
+        save_response(transaction, &idempotency_key, *user_id, response).await.map_err(e500)?;
     success_message().send();
     Ok(response)
 }
 
 fn success_message() -> FlashMessage {
-    FlashMessage::info(
-        "The newsletter issue has been accepted - \
-    emails will go out shortly.",
-    )
+    FlashMessage::info("The newsletter issue has been accepted - emails will go out shortly.")
 }
 
 #[tracing::instrument(skip_all)]

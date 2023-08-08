@@ -1,6 +1,7 @@
-use crate::helpers::spawn_app;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, ResponseTemplate};
+
+use crate::helpers::spawn_app;
 
 #[tokio::test]
 async fn confirmations_without_token_are_rejected_with_400() {
@@ -28,9 +29,7 @@ async fn the_link_returned_by_subscribe_returns_a_200_if_called() {
     let email_request = &app.mock_server.received_requests().await.unwrap()[0];
     let confirmation_link = app.get_confirmation_links(email_request);
 
-    let reponse = reqwest::get(confirmation_link.html)
-        .await
-        .expect("Failed to execute request.");
+    let reponse = reqwest::get(confirmation_link.html).await.expect("Failed to execute request.");
 
     assert_eq!(reponse.status().as_u16(), 200);
 }
@@ -50,11 +49,7 @@ async fn clicking_on_the_confirmation_link_confirms_a_subscriber() {
     let email_request = &app.mock_server.received_requests().await.unwrap()[0];
     let confirmation_link = app.get_confirmation_links(email_request);
 
-    reqwest::get(confirmation_link.html)
-        .await
-        .unwrap()
-        .error_for_status()
-        .unwrap();
+    reqwest::get(confirmation_link.html).await.unwrap().error_for_status().unwrap();
 
     let saved = sqlx::query!("SELECT email, name, status FROM subscriptions",)
         .fetch_one(&app.db_pool)
@@ -82,15 +77,10 @@ async fn clicking_the_confirmation_link_twice_returns_a_500() {
     let email_request = &app.mock_server.received_requests().await.unwrap()[0];
     let confirmation_link = app.get_confirmation_links(email_request);
 
-    reqwest::get(confirmation_link.html.clone())
-        .await
-        .unwrap()
-        .error_for_status()
-        .unwrap();
+    reqwest::get(confirmation_link.html.clone()).await.unwrap().error_for_status().unwrap();
 
-    let reponse = reqwest::get(confirmation_link.html.clone())
-        .await
-        .expect("Failed to execute request.");
+    let reponse =
+        reqwest::get(confirmation_link.html.clone()).await.expect("Failed to execute request.");
 
     assert_eq!(reponse.status().as_u16(), 500);
 }

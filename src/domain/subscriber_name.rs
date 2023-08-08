@@ -14,15 +14,14 @@ impl SubscriberName {
         let is_too_long = name.len() > 256;
         let forbidden_characters = ['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
         // Check if the name contains any of the forbidden characters.
-        let contains_forbidden_characters = name
-            .chars()
-            .any(|char| forbidden_characters.contains(&char));
+        let contains_forbidden_characters =
+            name.chars().any(|char| forbidden_characters.contains(&char));
         // If any of the above checks returns true, return an error.
         if is_empty_or_whitespace || is_too_long || contains_forbidden_characters {
             Err(format!(
-                "`{}` is not a valid subscriber name. Subscriber name cannot be empty, more than 256 characters long, or contain the following characters: {:?}",
-                name,
-                forbidden_characters,
+                "`{}` is not a valid subscriber name. Subscriber name cannot be empty, more than \
+                 256 characters long, or contain the following characters: {:?}",
+                name, forbidden_characters,
             ))
         } else {
             Ok(Self(name))
@@ -32,8 +31,9 @@ impl SubscriberName {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use claim::{assert_err, assert_ok};
+
+    use super::*;
 
     #[test]
     fn a_256_graheme_long_name_is_valid() {

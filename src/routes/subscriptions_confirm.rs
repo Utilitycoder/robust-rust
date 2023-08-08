@@ -1,8 +1,9 @@
-use crate::routes::error_chain_fmt;
 use actix_web::{web, HttpResponse, ResponseError};
 use reqwest::StatusCode;
 use sqlx::PgPool;
 use uuid::Uuid;
+
+use crate::routes::error_chain_fmt;
 
 #[derive(serde::Deserialize)]
 pub struct Parameters {
@@ -52,32 +53,27 @@ pub async fn confirm(parameters: web::Query<Parameters>, pool: web::Data<PgPool>
 
 #[tracing::instrument(name = "Mark subscriber as confirmed", skip(pool, subscriber_id))]
 pub async fn confirm_subscriber(pool: &PgPool, subscriber_id: Uuid) -> Result<(), sqlx::Error> {
-    let confirmed = sqlx::query!(
-        r#"SELECT status FROM subscriptions WHERE id = $1"#,
-        subscriber_id
-    )
-    .fetch_one(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?
-    .status
-        == "confirmed";
+    let confirmed =
+        sqlx::query!(r#"SELECT status FROM subscriptions WHERE id = $1"#, subscriber_id)
+            .fetch_one(pool)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to execute query: {:?}", e);
+                e
+            })?
+            .status
+            == "confirmed";
     if confirmed {
         return Err(sqlx::Error::RowNotFound);
     }
 
-    sqlx::query!(
-        r#"UPDATE subscriptions SET status = 'confirmed' WHERE id = $1"#,
-        subscriber_id
-    )
-    .execute(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+    sqlx::query!(r#"UPDATE subscriptions SET status = 'confirmed' WHERE id = $1"#, subscriber_id)
+        .execute(pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to execute query: {:?}", e);
+            e
+        })?;
     Ok(())
 }
 

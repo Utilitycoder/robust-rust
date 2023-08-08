@@ -1,13 +1,11 @@
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHasher};
 use once_cell::sync::Lazy;
-use robust_rust::{
-    configuration::{get_configuration, DatabaseSettings},
-    email_client::EmailClient,
-    issue_delivery_worker::{try_execute_task, ExecutionOutcome},
-    startup::{get_connection_pool, Application},
-    telemetry::{get_subscriber, init_subscriber},
-};
+use robust_rust::configuration::{get_configuration, DatabaseSettings};
+use robust_rust::email_client::EmailClient;
+use robust_rust::issue_delivery_worker::{try_execute_task, ExecutionOutcome};
+use robust_rust::startup::{get_connection_pool, Application};
+use robust_rust::telemetry::{get_subscriber, init_subscriber};
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
 use wiremock::MockServer;
@@ -45,9 +43,7 @@ impl TestApp {
     pub async fn dispatch_all_pending_emails(&self) {
         loop {
             if let ExecutionOutcome::EmptyQueue =
-                try_execute_task(&self.db_pool, &self.email_client)
-                    .await
-                    .unwrap()
+                try_execute_task(&self.db_pool, &self.email_client).await.unwrap()
             {
                 break;
             }
@@ -115,11 +111,7 @@ impl TestApp {
     }
 
     pub async fn get_admin_dashboard_html(&self) -> String {
-        self.get_admin_dashboard()
-            .await
-            .text()
-            .await
-            .expect("Failed to get response text.")
+        self.get_admin_dashboard().await.text().await.expect("Failed to get response text.")
     }
 
     pub async fn get_change_password(&self) -> reqwest::Response {
@@ -131,11 +123,7 @@ impl TestApp {
     }
 
     pub async fn get_change_password_html(&self) -> String {
-        self.get_change_password()
-            .await
-            .text()
-            .await
-            .expect("Failed to get response text.")
+        self.get_change_password().await.text().await.expect("Failed to get response text.")
     }
 
     pub async fn post_change_password<Body>(&self, body: &Body) -> reqwest::Response
@@ -167,11 +155,7 @@ impl TestApp {
     }
 
     pub async fn get_publish_newsletter_html(&self) -> String {
-        self.get_publish_newsletter()
-            .await
-            .text()
-            .await
-            .expect("Failed to get response text.")
+        self.get_publish_newsletter().await.text().await.expect("Failed to get response text.")
     }
 
     pub async fn post_publish_newsletters<Body>(&self, body: &Body) -> reqwest::Response
@@ -251,9 +235,8 @@ pub async fn spawn_app() -> TestApp {
 
     // Launch our application as a background task
 
-    let application = Application::build(configuration.clone())
-        .await
-        .expect("Failed to build app.");
+    let application =
+        Application::build(configuration.clone()).await.expect("Failed to build app.");
 
     let application_port = application.port();
 
@@ -293,9 +276,8 @@ async fn configure_database(config: &DatabaseSettings) -> PgPool {
         .expect("Failed to create database.");
 
     // Migrate database
-    let connection_pool = PgPool::connect_with(config.with_db())
-        .await
-        .expect("Failed to connect to Postgres.");
+    let connection_pool =
+        PgPool::connect_with(config.with_db()).await.expect("Failed to connect to Postgres.");
 
     sqlx::migrate!("./migrations")
         .run(&connection_pool)

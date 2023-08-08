@@ -1,11 +1,14 @@
-use crate::{
-    configuration::Settings, domain::SubscriberEmail, email_client::EmailClient,
-    startup::get_connection_pool,
-};
-use sqlx::{PgPool, Postgres, Transaction};
 use std::time::Duration;
-use tracing::{field::display, Span};
+
+use sqlx::{PgPool, Postgres, Transaction};
+use tracing::field::display;
+use tracing::Span;
 use uuid::Uuid;
+
+use crate::configuration::Settings;
+use crate::domain::SubscriberEmail;
+use crate::email_client::EmailClient;
+use crate::startup::get_connection_pool;
 
 pub enum ExecutionOutcome {
     TaskCompleted,
@@ -38,12 +41,7 @@ pub async fn try_execute_task(
         Ok(email) => {
             let issue = get_issue(pool, issue_id).await?;
             if let Err(e) = email_client
-                .send_email(
-                    &email,
-                    &issue.title,
-                    &issue.html_content,
-                    &issue.text_content,
-                )
+                .send_email(&email, &issue.title, &issue.html_content, &issue.text_content)
                 .await
             {
                 tracing::error!(
@@ -88,11 +86,7 @@ async fn dequeue_task(
     .fetch_optional(&mut *transaction)
     .await?;
     if let Some(r) = r {
-        Ok(Some((
-            transaction,
-            r.newsletter_issue_id,
-            r.subscriber_email,
-        )))
+        Ok(Some((transaction, r.newsletter_issue_id, r.subscriber_email)))
     } else {
         Ok(None)
     }

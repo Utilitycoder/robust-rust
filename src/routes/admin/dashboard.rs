@@ -1,8 +1,11 @@
-use crate::{session_state::TypedSession, utils::e500};
-use actix_web::{http::header::ContentType, web, HttpResponse};
+use actix_web::http::header::ContentType;
+use actix_web::{web, HttpResponse};
 use anyhow::Context;
 use sqlx::PgPool;
 use uuid::Uuid;
+
+use crate::session_state::TypedSession;
+use crate::utils::e500;
 
 pub async fn admin_dashboard(
     session: TypedSession,
@@ -11,15 +14,11 @@ pub async fn admin_dashboard(
     let username = if let Some(user_id) = session.get_user_id().map_err(e500)? {
         get_username(user_id, &pool).await.map_err(e500)?
     } else {
-        return Ok(HttpResponse::SeeOther()
-            .insert_header(("location", "/login"))
-            .finish());
+        return Ok(HttpResponse::SeeOther().insert_header(("location", "/login")).finish());
     };
 
-    Ok(HttpResponse::Ok()
-        .content_type(ContentType::html())
-        .body(format!(
-            r#"<!DOCTYPE html>
+    Ok(HttpResponse::Ok().content_type(ContentType::html()).body(format!(
+        r#"<!DOCTYPE html>
             <html lang="en">
             <head>
             <meta http-equiv="content-type" content="text/html; charset=utf-8">
@@ -39,7 +38,7 @@ pub async fn admin_dashboard(
             </ol>
             </body>
             </html>"#,
-        )))
+    )))
 }
 
 #[tracing::instrument(name = "Get username", skip(pool))]

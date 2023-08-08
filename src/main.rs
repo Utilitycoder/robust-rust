@@ -1,8 +1,9 @@
-use robust_rust::{
-    configuration::get_configuration, issue_delivery_worker::run_worker_until_stopped,
-    startup::Application, telemetry::get_subscriber, telemetry::init_subscriber,
-};
 use std::fmt::{Debug, Display};
+
+use robust_rust::configuration::get_configuration;
+use robust_rust::issue_delivery_worker::run_worker_until_stopped;
+use robust_rust::startup::Application;
+use robust_rust::telemetry::{get_subscriber, init_subscriber};
 use tokio::task::JoinError;
 
 #[tokio::main]

@@ -1,23 +1,25 @@
-use crate::{
-    authentication::reject_anonymous_users,
-    configuration::{DatabaseSettings, Settings},
-    email_client::EmailClient,
-    routes::{
-        admin_dashboard, change_password, change_password_form, confirm, health_check, home,
-        log_out, login, login_form, publish_newsletter, publish_newsletter_form, subscribe,
-    },
-};
+use std::net::TcpListener;
+
 use actix_session::storage::RedisSessionStore;
 use actix_session::SessionMiddleware;
-use actix_web::{cookie::Key, dev::Server, web, App, HttpServer};
+use actix_web::cookie::Key;
+use actix_web::dev::Server;
+use actix_web::{web, App, HttpServer};
 use actix_web_flash_messages::storage::CookieMessageStore;
 use actix_web_flash_messages::FlashMessagesFramework;
 use actix_web_lab::middleware::from_fn;
 use secrecy::{ExposeSecret, Secret};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
-use std::net::TcpListener;
 use tracing_actix_web::TracingLogger;
+
+use crate::authentication::reject_anonymous_users;
+use crate::configuration::{DatabaseSettings, Settings};
+use crate::email_client::EmailClient;
+use crate::routes::{
+    admin_dashboard, change_password, change_password_form, confirm, health_check, home, log_out,
+    login, login_form, publish_newsletter, publish_newsletter_form, subscribe,
+};
 
 pub struct Application {
     port: u16,
@@ -30,10 +32,8 @@ impl Application {
 
         let email_client = configuration.email_client.client();
 
-        let address = format!(
-            "{}:{}",
-            configuration.application.host, configuration.application.port
-        );
+        let address =
+            format!("{}:{}", configuration.application.host, configuration.application.port);
 
         let listener = TcpListener::bind(address)?;
         let port = listener.local_addr().unwrap().port();

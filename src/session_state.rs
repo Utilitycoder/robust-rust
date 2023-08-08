@@ -1,6 +1,8 @@
-use actix_session::{Session, SessionExt, SessionGetError, SessionInsertError};
-use actix_web::{dev::Payload, FromRequest, HttpRequest};
 use std::future::{ready, Ready};
+
+use actix_session::{Session, SessionExt, SessionGetError, SessionInsertError};
+use actix_web::dev::Payload;
+use actix_web::{FromRequest, HttpRequest};
 use uuid::Uuid;
 
 // Purpose: A wrapper around `Session` that provides type-safe access to the
@@ -48,7 +50,8 @@ impl FromRequest for TypedSession {
     // resolves to the wrapped value the first time it's polled by the executor.
     type Future = Ready<Result<TypedSession, Self::Error>>;
 
-    // The `from_request` method is called by actix-web to convert the incoming request into a `TypedSession`.
+    // The `from_request` method is called by actix-web to convert the incoming request into a
+    // `TypedSession`.
     fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
         ready(Ok(TypedSession(req.get_session())))
     }
