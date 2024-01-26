@@ -196,8 +196,9 @@ impl TestUser {
 
     async fn store(&self, pool: &PgPool) {
         let salt = SaltString::generate(&mut rand::thread_rng());
+        let salt_string = SaltString::as_salt(&salt);
         let password_hash = Argon2::default()
-            .hash_password(self.password.as_bytes(), salt.as_ref())
+            .hash_password(self.password.as_bytes(), salt_string)
             .unwrap()
             .to_string();
 
